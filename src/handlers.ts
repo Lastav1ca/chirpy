@@ -1,4 +1,4 @@
-import express, { type Express, type Request, type Response } from 'express';
+import express, { NextFunction, type Express, type Request, type Response } from 'express';
 import { middlewareLogResponses, middlewareMetricsInc } from './middleware.js';
 import { config } from './config.js';
 
@@ -27,38 +27,38 @@ export function handlerRequestsNumReset(req : Request, res : Response){
     res.send('Counter reset.')
 }
 
-export async function handlerValidateChirp (req : Request, res : Response){
-    let body = "";
+export async function handlerValidateChirp (req : Request, res : Response, next : NextFunction){
+    type parameters = {
+        body : string;
+    };
 
-    req.on("data", (chunk) => {
-        body += chunk;
-    });
+    try {
+            const params: parameters = req.body;
 
-    req.on("end", () => {
-        try{
-            const parsedBody = JSON.parse(body)
+            // Checking chirp length
+            if (params.body.length > 140) {
+                throw new Error("Chirp is too long");
+                //return res.status(400).json({error : "Something went wrong"});
+            } 
 
-            if (parsedBody.body.length > 140){
+            const profaneWords = ["kerfuffle", "sharbert", "fornax"];
 
-                const respBody = {
-                    error : "Something went wrong"
-                }
+            // Cleaning profane words
+            const cleanedBody = params.body
+                .split("")
+                .map((word) => {
 
-                const respBodyStringified = JSON.stringify(respBody);
-                res.status(400).send(respBodyStringified);
+                    if (profaneWords.includes(word.toLowerCase())) {
+                        return "****";
+                    }
+                    return word
+                })
+                .join(" ");
 
-            }else{
+            return res.status(200).json({cleanedBody});
 
-                const respBody = {
-                    "valid" : true
-                }
-
-                const respBodyStringified = JSON.stringify(respBody);
-                res.status(400).send(respBodyStringified);
-            }
-        }catch(error){
-            res.status(400).send("Invalid JSON")
+        } catch (err) {
+            next(err);
         }
-    });
 
 }

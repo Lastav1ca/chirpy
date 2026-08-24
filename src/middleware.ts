@@ -19,3 +19,12 @@ export const middlewareMetricsInc = (req : Request, res : Response, next : NextF
     
     next()
 };
+
+export const middlewareErrors = (err : Error, req : Request, res : Response, next : NextFunction) : void => {
+
+    console.log("Unknown error!");
+    res.status(500).json({
+        error : "Something went wrong on our end"
+    })
+
+}
