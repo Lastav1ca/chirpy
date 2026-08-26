@@ -1,7 +1,7 @@
 import express, { type Express, type Request, type Response } from 'express';
 import { middlewareErrors, middlewareLogResponses, middlewareMetricsInc } from './middleware.js';
 import { config } from './config.js';
-import { handlerReadiness, handlerRequestsNum, handlerRequestsNumReset, handlerValidateChirp } from './handlers.js';
+import { handlerCreateUser, handlerReadiness, handlerRequestsNum, handlerRequestsNumReset, handlerValidateChirp } from './handlers.js';
 
 const app: Express = express();
 const port = 8080;
@@ -14,6 +14,8 @@ app.use("/app", express.static("./src/app"));
 app.use(middlewareLogResponses);
 
 app.post("/admin/metrics", handlerRequestsNum);
+
+app.post("/api/users", handlerCreateUser);
 
 app.use("/admin/reset", handlerRequestsNumReset);
 
