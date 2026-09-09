@@ -3,6 +3,14 @@ import { middlewareErrors, middlewareLogResponses, middlewareMetricsInc } from '
 import { config } from './config.js';
 import { handlerCreateUser, handlerReadiness, handlerRequestsNum, handlerRequestsNumReset, handlerValidateChirp } from './handlers.js';
 
+import postgres from "postgres";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { drizzle } from "drizzle-orm/postgres-js";
+
+const migrationClient = postgres(config.db.url, { max: 1 });
+await migrate(drizzle(migrationClient), config.db.migrationConfig);
+
+
 const app: Express = express();
 const port = 8080;
 
@@ -24,6 +32,8 @@ app.post('/api/validate_chirp', handlerValidateChirp);
 app.get("/api/healthz", handlerReadiness);
 
 app.use(middlewareErrors);
+
+
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
