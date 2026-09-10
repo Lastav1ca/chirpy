@@ -2,8 +2,10 @@ import express, { NextFunction, type Express, type Request, type Response } from
 import { middlewareLogResponses, middlewareMetricsInc } from './middleware.js';
 import { config } from './config.js';
 import { error } from 'node:console';
-import { createUser, deleteAllUsers } from './db/queries/users.js';
+import { createUser, deleteAllUsers, getUserByEmail } from './db/queries/users.js';
 import { createChirp, getAllChirps, getChirp } from './db/queries/chirps.js';
+import { NewUser } from './db/schema.js';
+import { checkPasswordHash, hashPassword } from './auth.js';
 
 
 export function handlerReadiness(req : Request, res : Response){
@@ -37,19 +39,27 @@ export async function handlerRequestsNumReset(req : Request, res : Response){
 
 export async function handlerCreateUser(req : Request, res : Response) {
     try {
-        const {email} = req.body;
+        const {email, password} = req.body;
 
         if (!email || typeof(email) !== "string"){
             return res.status(400).json({error : "Missing or invalid email"})
         }
 
-        const newUser = await createUser({email})
+        if (!password || typeof(password) !== "string"){
+            return res.status(400).json({error : "Missing or invalid password"})
+        }
+
+        const hashedPassword = await hashPassword(password)
+
+        const newUser = await createUser({email, hashedPassword})
 
         if (!newUser){
             return res.status(400).json({error : "User with this email already exists"})
         }
 
-        return res.status(201).json(newUser)
+        const { hashedPassword: _, ...userInfo } = newUser;
+
+        return res.status(201).json(userInfo)
     }catch(error){
         return res.status(500).json({error : "Could not create user"})
     }
@@ -116,4 +126,20 @@ export async function handlerGetChirp(req : Request, res : Response){
     }
 
     return res.status(200).json(chirp);
+}
+
+export async function handlerLogin(req : Request, res : Response){
+    const user = await getUserByEmail(req.body.email)
+
+    if (!user){
+        return res.status(401).json({error: "Invalid email/password"})
+    }
+
+    if (!await checkPasswordHash(req.body.password, user.hashedPassword)){
+        return res.status(401).json({error: "Invalid email/password"})
+    }
+
+    const { hashedPassword: _, ...userInfo } = user;
+    
+    return res.status(200).json(userInfo)
 }
