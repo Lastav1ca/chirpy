@@ -3,7 +3,7 @@ import { middlewareLogResponses, middlewareMetricsInc } from './middleware.js';
 import { config } from './config.js';
 import { error } from 'node:console';
 import { createUser, deleteAllUsers } from './db/queries/users.js';
-import { createChirp } from './db/queries/chirps.js';
+import { createChirp, getAllChirps, getChirp } from './db/queries/chirps.js';
 
 
 export function handlerReadiness(req : Request, res : Response){
@@ -98,4 +98,22 @@ export async function handlerCreateChirp(req : Request, res : Response, next : N
     }
 
 
+}
+
+export async function handlerGetAllChirps(req : Request, res : Response, next : NextFunction){
+    const chirps = await getAllChirps()
+
+    return res.status(200).json(chirps);
+}
+
+export async function handlerGetChirp(req : Request, res : Response){
+    const chirpId = String(req.params.chirpId);
+
+    const chirp = await getChirp(chirpId)
+
+    if (!chirp){
+        return res.status(404).json({error : "Chirp not found (invalid id)."});
+    }
+
+    return res.status(200).json(chirp);
 }
