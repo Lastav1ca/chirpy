@@ -1,9 +1,9 @@
-import { pgTable, uuid, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, uuid, timestamp, varchar, text } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
     id : uuid("id").primaryKey().defaultRandom(),
-    created_at : timestamp("created_at").notNull().defaultNow(),
-    updated_at : timestamp("updated_at")
+    createdAt : timestamp("created_at").notNull().defaultNow(),
+    updatedAt : timestamp("updated_at")
         .notNull()
         .defaultNow()
         .$onUpdate(() => new Date()),
@@ -12,3 +12,16 @@ export const users = pgTable("users", {
 
 export type NewUser = typeof users.$inferInsert;
 
+export const chirps = pgTable("chirps", {
+    id : uuid("id").primaryKey().defaultRandom(),
+    createdAt : timestamp("created_at").notNull().defaultNow(),
+    updatedAt : timestamp("updated_at")
+        .notNull()
+        .defaultNow()
+        .$onUpdate(() => new Date()),
+    body : text("body").notNull(),
+    userId : uuid("user_id").notNull().references(() => users.id, {onDelete : 'cascade'}),
+
+});
+
+export type NewChirp = typeof chirps.$inferInsert;
