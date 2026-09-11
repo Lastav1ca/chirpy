@@ -2,10 +2,11 @@ import express, { NextFunction, type Express, type Request, type Response } from
 import { middlewareLogResponses, middlewareMetricsInc } from './middleware.js';
 import { config } from './config.js';
 import { error } from 'node:console';
-import { createUser, deleteAllUsers, getUserByEmail } from './db/queries/users.js';
+import { createUser, deleteAllUsers, getUserByEmail, updateUser } from './db/queries/users.js';
 import { createChirp, getAllChirps, getChirp } from './db/queries/chirps.js';
 import { NewUser } from './db/schema.js';
-import { checkPasswordHash, getBearerToken, hashPassword, makeJWT, validateJWT } from './auth.js';
+import { checkPasswordHash, getBearerToken, hashPassword, makeJWT, makeRefreshToken, validateJWT } from './auth.js';
+import { createToken, getUserFromRefreshToken, revokeToken } from './db/queries/refresh_tokens.js';
 
 
 export function handlerReadiness(req : Request, res : Response){
@@ -144,18 +145,56 @@ export async function handlerLogin(req : Request, res : Response){
     }
 
     const { hashedPassword: _, ...userInfo } = user;
-
-    let expiresInSeconds = req.body.expiresInSeconds;
-
-    if (expiresInSeconds){
-        if (expiresInSeconds > 3600){
-            expiresInSeconds = 3600
-        }
-    }else{
-        expiresInSeconds = 3600
-    }
     
-    const token = makeJWT(user.id, expiresInSeconds, config.jwtSecret)
+    const token = makeJWT(user.id, 3600, config.jwtSecret)
 
-    return res.status(200).json({ ...userInfo, token})
+    const refreshToken = makeRefreshToken();
+    await createToken({
+        token: refreshToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+    });
+
+    return res.status(200).json({ ...userInfo, token, refreshToken})
+}
+
+export async function handlerRefresh(req : Request, res : Response){
+    let token = getBearerToken(req)
+
+    const user = await getUserFromRefreshToken(token)
+
+    if (!user){
+        return res.status(401).json({error: "Invalid user"})
+    }
+
+    token = makeJWT(user.id, 3600, config.jwtSecret)
+    return res.status(200).json({ token })
+}
+
+export async function handlerRevoke(req : Request, res : Response){
+    const token = getBearerToken(req)
+    await revokeToken(token)
+    return res.status(204).send()
+}
+
+export async function handlerUpdateInfo(req : Request, res : Response){
+    const token = getBearerToken(req)
+
+    const userId = validateJWT(token, config.jwtSecret)
+
+    if (!req.body.email || !req.body.password || typeof(req.body.email) !== "string" || typeof(req.body.password) !== "string"){
+        return res.status(400).json("Email or password missing")
+    }
+
+    const hashed = await hashPassword(req.body.password)
+
+    const updatedUser = await updateUser(userId, req.body.email, hashed)
+
+    if (!updatedUser) {
+        return res.status(401).json({error : "User not found"})
+    }
+
+    const { hashedPassword: _, ...userInfo } = updatedUser;
+
+    return res.status(200).json(userInfo)
 }

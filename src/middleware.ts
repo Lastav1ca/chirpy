@@ -22,7 +22,7 @@ export const middlewareMetricsInc = (req : Request, res : Response, next : NextF
 
 export const middlewareErrors = (err : Error, req : Request, res : Response, next : NextFunction) : void => {
 
-    console.log("Unknown error!");
+    console.error(err);
     res.status(500).json({
         error : "Something went wrong on our end"
     })
