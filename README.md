@@ -1,14 +1,10 @@
-# Chirpy
-
 A small Twitter-like HTTP API built while working through the boot.dev course
-*Learn HTTP Servers in TypeScript*. Users can register, log in, and post short
-messages ("chirps").
+*Learn HTTP Servers in TypeScript*.
 
 ## Stack
 
 - TypeScript + Express 5
 - PostgreSQL with Drizzle ORM
-- argon2 for password hashing, JWT access tokens + database-backed refresh tokens
 - Vitest for unit tests
 
 ## Setup
@@ -49,8 +45,3 @@ npm test        # unit tests
 | GET    | `/api/healthz`        | –      | Health check                         |
 | GET    | `/admin/metrics`      | –      | Fileserver hit counter               |
 | POST   | `/admin/reset`        | –      | Delete all users (dev only)          |
-
-Authenticated endpoints expect an `Authorization: Bearer <token>` header.
-Access tokens expire after 1 hour, refresh tokens after 60 days.
-
-Static files are served from `/app`.
