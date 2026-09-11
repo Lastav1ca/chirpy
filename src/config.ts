@@ -19,9 +19,9 @@ export type DBConfig = {
 type Config = {
   api: APIConfig;
   db: DBConfig;
+  jwtSecret : string;
 };
 
-//helper func for throwing error if env is missing
 function envOrThrow(key : string) : string{
     const value = process.env[key];
     if (!value) throw new Error(`Missing environment variable: ${key}`)
@@ -31,4 +31,5 @@ function envOrThrow(key : string) : string{
 export const config: Config = {
   api: { fileserverHits: 0, platform: envOrThrow("PLATFORM") },
   db: { url: envOrThrow("DB_URL"), migrationConfig },
+  jwtSecret : envOrThrow("JWT_SECRET")
 };

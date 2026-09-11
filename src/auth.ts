@@ -1,6 +1,7 @@
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import type { Jwt, JwtPayload } from "jsonwebtoken";
+import type { Request } from "express"
 
 type payload = Pick<JwtPayload, "iss" | "sub" | "iat" | "exp">;
 
@@ -38,3 +39,14 @@ export function validateJWT(tokenString: string, secret: string) : string {
     }
 
 }
+
+export function getBearerToken(req: Request) : string{
+    const auth = req.get('Authorization')
+
+    if (!auth){
+        throw new Error("No authorization header")
+    }
+
+    return auth.replace("Bearer ", "").trim()
+}
+

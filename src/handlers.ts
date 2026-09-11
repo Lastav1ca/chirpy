@@ -5,7 +5,7 @@ import { error } from 'node:console';
 import { createUser, deleteAllUsers, getUserByEmail } from './db/queries/users.js';
 import { createChirp, getAllChirps, getChirp } from './db/queries/chirps.js';
 import { NewUser } from './db/schema.js';
-import { checkPasswordHash, hashPassword } from './auth.js';
+import { checkPasswordHash, getBearerToken, hashPassword, makeJWT, validateJWT } from './auth.js';
 
 
 export function handlerReadiness(req : Request, res : Response){
@@ -68,13 +68,16 @@ export async function handlerCreateUser(req : Request, res : Response) {
 export async function handlerCreateChirp(req : Request, res : Response, next : NextFunction){
     type parameters = {
         body : string;
-        userId : string;
     };
 
     let cleanedBody = "";
 
     try {
-            const params: parameters = req.body;
+
+        const token = getBearerToken(req)
+        const decoded = validateJWT(token, config.jwtSecret)
+
+        const params: parameters = req.body;
 
         // Checking chirp length
         if (params.body.length > 140) {
@@ -96,7 +99,7 @@ export async function handlerCreateChirp(req : Request, res : Response, next : N
             })
             .join(" ");
 
-        const newChirp = await createChirp({body : cleanedBody, userId: params.userId})
+        const newChirp = await createChirp({body : cleanedBody, userId: decoded})
 
         if (!newChirp){
             return res.status(400).json({error : "User with this id doenst exist! Chirp not created."})
@@ -129,6 +132,7 @@ export async function handlerGetChirp(req : Request, res : Response){
 }
 
 export async function handlerLogin(req : Request, res : Response){
+
     const user = await getUserByEmail(req.body.email)
 
     if (!user){
@@ -140,6 +144,18 @@ export async function handlerLogin(req : Request, res : Response){
     }
 
     const { hashedPassword: _, ...userInfo } = user;
+
+    let expiresInSeconds = req.body.expiresInSeconds;
+
+    if (expiresInSeconds){
+        if (expiresInSeconds > 3600){
+            expiresInSeconds = 3600
+        }
+    }else{
+        expiresInSeconds = 3600
+    }
     
-    return res.status(200).json(userInfo)
+    const token = makeJWT(user.id, expiresInSeconds, config.jwtSecret)
+
+    return res.status(200).json({ ...userInfo, token})
 }
